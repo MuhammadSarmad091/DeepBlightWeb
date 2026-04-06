@@ -1,0 +1,1 @@
+mongodb+srv://admin:$fypdeepblight321@cluster0.wvbspwp.mongodb.net/

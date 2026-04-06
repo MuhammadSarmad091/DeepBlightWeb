@@ -1,0 +1,306 @@
+------AUTH ROUTES-----
+
+POST /auth/register
+  Description: Register a new user and send verification code to email
+  Request Body (JSON):
+    {
+      "username": "string (required)",
+      "email": "string (required)",
+      "password": "string (required, min 6 characters)"
+    }
+  Responses:
+    - 201: {"message": "Verification code sent to email."}
+    - 400: {"error": "username, email and password are required"} | {"error": "password must be at least 6 characters"}
+    - 409: {"error": "email already registered"}
+    - 500: {"error": "Could not send verification email. Please try again later."}
+
+POST /auth/verify
+  Description: Verify user email with verification code
+  Request Body (JSON):
+    {
+      "email": "string (required)",
+      "code": "string (required, 6-digit code)"
+    }
+  Responses:
+    - 200: {"message": "User verified successfully. Please log in."}
+    - 400: {"error": "email and code are required"}
+    - 404: {"error": "Invalid email or verification code."}
+    - 409: {"error": "This email has just been registered."}
+
+POST /auth/login
+  Description: Login user and return JWT token
+  Request Body (JSON):
+    {
+      "email": "string (required)",
+      "password": "string (required)"
+    }
+  Responses:
+    - 200: {"message": "login successful", "token": "jwt-token", "user": {"user_id": "...", "username": "...", "email": "..."}}
+    - 400: {"error": "email and password are required"}
+    - 401: {"error": "invalid email or password"}
+
+------OTHER ROUTES-----
+
+GET /profile
+  Description: Get authenticated user profile information
+  Headers: Authorization: Bearer <jwt-token>
+  Responses:
+    - 200: {"message": "profile", "user": {...user data...}}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+
+POST /leafscan/upload
+  Description: Upload a leaf image, run leaf detection, get disease prediction, and receive the next scan id for the user.
+  Notes: 
+    - First checks if image contains a leaf using leaf detection model
+    - If leaf is detected, runs disease classification model
+    - Returns prediction and suggested next_scan_id
+    - Images are stored in AWS S3 (or locally if USE_S3=False)
+  Headers: Authorization: Bearer <jwt-token>
+  Request Form Data (multipart/form-data):
+    - userid: string (required) -- user's id
+    - image: <image file> (required)
+  Responses:
+    - 200: {"predicted_class": "string", "probabilities": [float, ...], "next_scan_id": "string"}
+    - 200: {"message": "No model configured", "next_scan_id": "string"} (if model not available on server)
+    - 400: {"error": "userid is required"} | {"error": "No image file provided"} | {"error": "Empty filename"} | {"error": "Invalid userid format"} | {"error": "Leaf detection model not configured"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 403: {"error": "Provided userid does not match authenticated user"}
+    - 500: {"error": "Leaf not detected"} | {"error": "Failed to process image"}
+
+------LEAFSCAN ROUTES-----
+
+POST /leafscan/save
+  Description: Save a new leafscan record with image. 
+  Image Storage:
+    - If USE_S3=True: Images stored in AWS S3 at leafscans/<user_id>/<uuid>.ext
+    - If USE_S3=False: Images stored locally at storage/<user_id>/<uuid>.ext
+  Headers: Authorization: Bearer <jwt-token>
+  Request Body (JSON):
+    {
+      "scan_id": "string (required, unique identifier for this scan)",
+      "image": <binary image file> (required, multipart/form-data),
+      "datetime": "string (required, ISO format: YYYY-MM-DDTHH:MM:SS)",
+      "leaftype": "string (required, e.g., 'Potato')"
+    }
+  Alternative Request Format (multipart/form-data):
+    - scan_id: "string"
+    - image: <image file>
+    - datetime: "string"
+    - leaftype: "string"
+  Responses:
+    - 201: {
+        "message": "Scan saved successfully",
+        "scan_record": {
+          "_id": "mongodb-object-id",
+          "user_id": "user-id",
+          "scan_id": "scan-id",
+          "image_url": "s3://deepblight-leafscans/leafscans/user-id/uuid.ext OR storage/user-id/uuid.ext",
+          "leaftype": "Potato",
+          "datetime": "2025-12-05T10:30:00",
+          "created_at": "2025-12-05T10:35:20.123456"
+        }
+      }
+    - 400: {"error": "scan_id, leaftype, and datetime are required"} | {"error": "No image file provided"} | {"error": "Empty filename"} | {"error": "Invalid datetime format. Use ISO format (YYYY-MM-DDTHH:MM:SS)"} | {"error": "Failed to upload image to S3"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 409: {"error": "Scan with this ID already exists for user"}
+    - 500: {"error": "Failed to save scan"}
+
+DELETE /leafscan/delete
+  Description: Delete a leafscan record and its associated image file
+  Headers: Authorization: Bearer <jwt-token>
+  Request Body (JSON):
+    {
+      "scan_id": "string (required)"
+    }
+  Responses:
+    - 200: {"message": "Scan deleted successfully"}
+    - 400: {"error": "scan_id is required"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 404: {"error": "Scan not found"}
+    - 500: {"error": "Failed to delete scan"}
+
+GET /leafscan/getall
+  Description: Get all leafscans for the authenticated user. Returns scans sorted by creation date (newest first). If an image doesn't exist, image_exists will be false but scan is still returned.
+  Headers: Authorization: Bearer <jwt-token>
+  Request: No body required
+  Responses:
+    - 200: {
+        "message": "Scans retrieved successfully",
+        "total_scans": int,
+        "scans": [
+          {
+            "_id": "mongodb-object-id",
+            "user_id": "user-id",
+            "scan_id": "scan-id",
+            "image_url": "storage/user-id/uuid4.ext",
+            "image_exists": boolean,
+            "leaftype": "Potato",
+            "datetime": "2025-12-05T10:30:00",
+            "created_at": "2025-12-05T10:35:20.123456"
+          },
+          ...
+        ]
+      }
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 500: {"error": "Failed to retrieve scans"}
+
+POST /leafscan/getsome
+  Description: Get paginated leafscans for the authenticated user. Used for "Show More" functionality in mobile app. Returns scans sorted by creation date (newest first).
+  Headers: Authorization: Bearer <jwt-token>
+  Request Body (JSON):
+    {
+      "start_index": int (optional, default: 0, starting index for pagination),
+      "scans_to_send": int (optional, default: 5, number of scans to return per request)
+    }
+  Example Request:
+    - First request: {"start_index": 0, "scans_to_send": 5} -> returns scans 0-4
+    - Second request (Show More): {"start_index": 5, "scans_to_send": 5} -> returns scans 5-9
+  Responses:
+    - 200: {
+        "message": "Scans retrieved successfully",
+        "start_index": 0,
+        "scans_returned": 5,
+        "total_scans": 42,
+        "has_more": true,
+        "scans": [...]
+      }
+    - 400: {"error": "start_index and scans_to_send must be positive integers"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 500: {"error": "Failed to retrieve scans"}
+
+POST /leafscan/getone
+  Description: Get a specific leafscan by scan_id for the authenticated user. Note: scan_id is unique within a user but not globally.
+  Headers: Authorization: Bearer <jwt-token>
+  Request Body (JSON):
+    {
+      "scan_id": "string (required)"
+    }
+  Responses:
+    - 200: {
+        "message": "Scan retrieved successfully",
+        "scan": {
+          "_id": "mongodb-object-id",
+          "user_id": "user-id",
+          "scan_id": "scan-id",
+          "image_url": "storage/user-id/uuid4.ext",
+          "image_exists": boolean,
+          "leaftype": "Potato",
+          "datetime": "2025-12-05T10:30:00",
+          "created_at": "2025-12-05T10:35:20.123456"
+        }
+      }
+    - 400: {"error": "scan_id is required"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 404: {"error": "Scan not found"}
+    - 500: {"error": "Failed to retrieve scan"}
+
+POST /leafscan/getimages
+  Description: Retrieve multiple images from the backend by their paths. Images are returned as base64 encoded strings for HTTP transmission. If an image file is not found, it's still returned in the response with found=false and image_data=null so the mobile app can handle missing images.
+  Headers: Authorization: Bearer <jwt-token>
+  Request Body (JSON):
+    {
+      "paths": ["storage/userid/uuid1.jpg", "storage/userid/uuid2.jpg", "storage/userid/uuid3.jpg"]
+    }
+  Example Request:
+    {
+      "paths": [
+        "storage/507f1f77bcf86cd799439011/a1b2c3d4e5f6.jpg",
+        "storage/507f1f77bcf86cd799439011/f6e5d4c3b2a1.jpg",
+        "storage/507f1f77bcf86cd799439011/invalid_path.jpg"
+      ]
+    }
+  Responses:
+    - 200: {
+        "message": "Images retrieved",
+        "total_requested": 3,
+        "total_found": 2,
+        "images": [
+          {
+            "path": "storage/507f1f77bcf86cd799439011/a1b2c3d4e5f6.jpg",
+            "found": true,
+            "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          },
+          {
+            "path": "storage/507f1f77bcf86cd799439011/f6e5d4c3b2a1.jpg",
+            "found": true,
+            "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          },
+          {
+            "path": "storage/507f1f77bcf86cd799439011/invalid_path.jpg",
+            "found": false,
+            "image_data": null
+          }
+        ]
+      }
+    - 400: {"error": "paths array is required"} | {"error": "paths must be an array"} | {"error": "paths must be a non-empty array"}
+    - 401: {"error": "Authorization header missing"} | {"error": "Token expired"} | {"error": "Invalid token"} | {"error": "User not found"}
+    - 500: {"error": "Failed to retrieve images"}
+
+------PLANTS ROUTES (Trefle.io API Integration)-----
+
+GET /plants/get
+  Description: Get a paginated list of plants from Trefle API
+  Query Parameters:
+    - page: int (optional, default=1)
+    - per_page: int (optional, default=20, max=100)
+  Headers: Authorization: Bearer TREFLE_API_TOKEN (internal, configured in backend)
+  Example: GET /plants/get?page=1&per_page=20
+  External API: GET https://trefle.io/api/v1/plants?page=1&per_page=20
+  Responses:
+    - 200: {
+        "data": [...plant objects...],
+        "links": {...pagination links...},
+        "meta": {...metadata...}
+      }
+    - 400: {"error": "page must be greater than 0"} | {"error": "per_page must be between 1 and 100"}
+    - 5xx: {"error": "Trefle API error or server error"}
+  Note: See https://www.trefle.io/api/schema for response schema
+
+GET /plants/search
+  Description: Search for plants by name in Trefle API
+  Query Parameters:
+    - q: string (required, search query e.g., "potato")
+    - page: int (optional, default=1)
+    - per_page: int (optional, default=10, max=100)
+  Headers: Authorization: Bearer TREFLE_API_TOKEN (internal, configured in backend)
+  Example: GET /plants/search?q=potato&page=1&per_page=10
+  External API: GET https://trefle.io/api/v1/plants/search?q=potato&page=1&per_page=10
+  Responses:
+    - 200: {
+        "data": [...plant search results...],
+        "links": {...pagination links...},
+        "meta": {...metadata...}
+      }
+    - 400: {"error": "search query 'q' is required"} | {"error": "page must be greater than 0"}
+    - 5xx: {"error": "Trefle API error or server error"}
+  Note: See https://www.trefle.io/api/schema for response schema
+
+GET /plants/<plant_id>
+  Description: Get detailed information about a specific plant by its ID
+  URL Parameters:
+    - plant_id: int (required, plant ID from Trefle)
+  Headers: Authorization: Bearer TREFLE_API_TOKEN (internal, configured in backend)
+  Example: GET /plants/12345
+  External API: GET https://trefle.io/api/v1/plants/12345
+  Responses:
+    - 200: {
+        "data": {
+          "id": 12345,
+          "common_name": "string",
+          "scientific_name": "string",
+          ...other plant properties...
+        }
+      }
+    - 400: {"error": "plant_id must be greater than 0"}
+    - 404: {"error": "Plant not found"}
+    - 5xx: {"error": "Trefle API error or server error"}
+  Note: See https://www.trefle.io/api/schema for response schema
+
+------NOTES-----
+- All authenticated endpoints require JWT token in Authorization header: "Bearer <token>"
+- All timestamps are in UTC and ISO format
+- Image files are stored locally in storage/<userid>/<filename>
+- Leafscan collection is automatically created in MongoDB on first use
+- Multipart form-data requests should use "image" as the file field name
+- Plants API endpoints use Trefle.io API token (configured in .env as TREFLE_API_TOKEN)
+- For detailed response schemas and available plant properties, visit https://www.trefle.io/api/schema
