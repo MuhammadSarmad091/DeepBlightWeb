@@ -57,6 +57,22 @@ export function Alert({ type = 'info', children, onDismiss }) {
   )
 }
 
+export function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel', onConfirm, onCancel }) {
+  if (!open) return null
+  return (
+    <div className="confirm-backdrop" onClick={onCancel}>
+      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        {title && <h3 className="confirm-title">{title}</h3>}
+        <p className="confirm-message">{message}</p>
+        <div className="confirm-actions">
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" className="btn btn-danger" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Spinner({ label = 'Loading' }) {
   return (
     <div className="spinner-wrap" role="status" aria-label={label}>

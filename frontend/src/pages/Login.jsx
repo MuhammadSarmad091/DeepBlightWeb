@@ -82,6 +82,9 @@ export default function Login() {
         <Button type="submit" className="btn-block" loading={loading}>
           Sign in
         </Button>
+        <p className="auth-forgot">
+          <Link to="/forgot-password">Forgot password?</Link>
+        </p>
       </form>
 
       <p className="auth-footer">

@@ -47,6 +47,7 @@ users_col = db.users
 unverified_users_col = db.unverified_users
 leafscan_col = db.leafscan
 insectscan_col = db.insectscan
+password_resets_col = db.password_resets
 
 print(f"✓ Connected to MongoDB database: {app.config.get('DATABASE_NAME', 'deepblight')}")
 
@@ -84,11 +85,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 try:
     users_col.create_index("email", unique=True)
     unverified_users_col.create_index("created_at", expireAfterSeconds=3600)
+    password_resets_col.create_index("created_at", expireAfterSeconds=3600)
 except errors.OperationFailure as e:
     print(f"Index creation failed (this might be okay if they already exist): {e}")
 
 # --- Setup Authentication Routes ---
-setup_auth_routes(app, users_col, unverified_users_col, mail)
+setup_auth_routes(app, users_col, unverified_users_col, mail, password_resets_col=password_resets_col)
 # --- Setup Leafscan Routes ---
 setup_leafscan_routes(app, users_col, leafscan_col, token_required, model=model, preprocess_fn=preprocess_for_inference, leaf_detect_model=leaf_det_model, leaf_det_preprocess_fn=leaf_preprocess, class_names=class_names, upload_folder=UPLOAD_FOLDER)
 # --- Setup Insectscan Routes ---

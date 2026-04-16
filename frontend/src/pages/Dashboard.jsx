@@ -74,20 +74,24 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="stats-grid">
-          <Card className="stat-card">
-            <div className="stat-icon stat-icon-leaf">
-              <Leaf size={22} />
-            </div>
-            <div className="stat-value">{leafTotal ?? '—'}</div>
-            <div className="stat-label">Leaf scans</div>
-          </Card>
-          <Card className="stat-card">
-            <div className="stat-icon stat-icon-bug">
-              <Bug size={22} />
-            </div>
-            <div className="stat-value">{insectTotal ?? '—'}</div>
-            <div className="stat-label">Pest scans</div>
-          </Card>
+          <Link to="/detect" state={{ mode: 'leaf' }} className="stat-card-link">
+            <Card className="stat-card">
+              <div className="stat-icon stat-icon-leaf">
+                <Leaf size={22} />
+              </div>
+              <div className="stat-value">{leafTotal ?? '—'}</div>
+              <div className="stat-label">Leaf scans</div>
+            </Card>
+          </Link>
+          <Link to="/detect" state={{ mode: 'pest' }} className="stat-card-link">
+            <Card className="stat-card">
+              <div className="stat-icon stat-icon-bug">
+                <Bug size={22} />
+              </div>
+              <div className="stat-value">{insectTotal ?? '—'}</div>
+              <div className="stat-label">Pest scans</div>
+            </Card>
+          </Link>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MapPin, Search, CloudSun, Droplets, Wind, ThermometerSun } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch } from '../api/client'
@@ -16,10 +16,35 @@ export default function Weather() {
   const [weekly, setWeekly] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const [suggestLoading, setSuggestLoading] = useState(false)
+  const geoAttempted = useRef(false)
+
+  const fetchWeatherRef = useRef(null)
 
   useEffect(() => {
     localStorage.setItem(LS_LOC, location)
   }, [location])
+
+  useEffect(() => {
+    if (geoAttempted.current) return
+    geoAttempted.current = true
+
+    const stored = localStorage.getItem(LS_LOC)
+    if (stored) {
+      if (fetchWeatherRef.current) fetchWeatherRef.current(stored)
+      return
+    }
+
+    if (!navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const label = `${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`
+        setDraft(label)
+        if (fetchWeatherRef.current) fetchWeatherRef.current(label)
+      },
+      () => {}
+    )
+  }, [])
 
   async function loadSuggestions(q) {
     const t = q.trim()
@@ -36,6 +61,8 @@ export default function Weather() {
     }
     setSuggestions(Array.isArray(data.results) ? data.results : [])
   }
+
+  fetchWeatherRef.current = fetchWeather
 
   async function fetchWeather(loc) {
     const q = loc.trim()
@@ -121,7 +148,6 @@ export default function Weather() {
                 setDraft(v)
                 loadSuggestions(v)
               }}
-              hint="Uses your backend WeatherAPI.com integration."
             />
             {suggestions.length > 0 && (
               <ul className="suggest-list">

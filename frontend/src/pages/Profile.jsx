@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { User, Calendar, Hash, Mail } from 'lucide-react'
+import { User, Calendar, Hash, Mail, KeyRound, ChevronDown } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch } from '../api/client'
-import { Card, Alert, Spinner } from '../components/ui'
+import { Card, Button, Input, Alert, Spinner } from '../components/ui'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -18,6 +18,15 @@ export default function Profile() {
   const [profileUser, setProfileUser] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwErrors, setPwErrors] = useState({})
+  const [pwMessage, setPwMessage] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -42,6 +51,37 @@ export default function Profile() {
     }
   }, [token, refreshProfile])
 
+  async function handleChangePassword(ev) {
+    ev.preventDefault()
+    setPwMessage('')
+    setPwError('')
+    const e = {}
+    if (!currentPw) e.currentPw = 'Current password is required.'
+    if (!newPw) e.newPw = 'New password is required.'
+    else if (newPw.length < 6) e.newPw = 'At least 6 characters.'
+    if (newPw && confirmPw !== newPw) e.confirmPw = 'Passwords do not match.'
+    setPwErrors(e)
+    if (Object.keys(e).length) return
+
+    setPwLoading(true)
+    const { ok, data, errorMessage, status } = await apiFetch('/auth/change-password', {
+      method: 'POST',
+      token,
+      body: { current_password: currentPw, new_password: newPw },
+    })
+    setPwLoading(false)
+    if (!ok) {
+      if (status === 401) setPwError(data?.error || 'Current password is incorrect.')
+      else setPwError(errorMessage || data?.error || 'Could not change password.')
+      return
+    }
+    setPwMessage(data?.message || 'Password changed successfully.')
+    setCurrentPw('')
+    setNewPw('')
+    setConfirmPw('')
+    setPwErrors({})
+  }
+
   const u = profileUser || user
 
   return (
@@ -49,7 +89,7 @@ export default function Profile() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Profile</h1>
-          <p className="page-subtitle">Your account details from the server.</p>
+          <p className="page-subtitle">Your account details and security settings.</p>
         </div>
       </header>
 
@@ -60,39 +100,87 @@ export default function Profile() {
           <Spinner label="Loading profile" />
         </div>
       ) : (
-        <Card title="Account">
-          <div className="profile-grid">
-            <div className="profile-row">
-              <User size={18} className="profile-icon" aria-hidden />
-              <div>
-                <div className="profile-label">Username</div>
-                <div className="profile-value">{u?.username ?? '—'}</div>
+        <>
+          <Card title="Account">
+            <div className="profile-grid">
+              <div className="profile-row">
+                <User size={18} className="profile-icon" aria-hidden />
+                <div>
+                  <div className="profile-label">Username</div>
+                  <div className="profile-value">{u?.username ?? '—'}</div>
+                </div>
+              </div>
+              <div className="profile-row">
+                <Mail size={18} className="profile-icon" aria-hidden />
+                <div>
+                  <div className="profile-label">Email</div>
+                  <div className="profile-value">{u?.email ?? '—'}</div>
+                </div>
+              </div>
+              <div className="profile-row">
+                <Hash size={18} className="profile-icon" aria-hidden />
+                <div>
+                  <div className="profile-label">User ID</div>
+                  <div className="profile-value mono">{u?.user_id ?? u?._id ?? '—'}</div>
+                </div>
+              </div>
+              <div className="profile-row">
+                <Calendar size={18} className="profile-icon" aria-hidden />
+                <div>
+                  <div className="profile-label">Member since</div>
+                  <div className="profile-value">{formatDate(u?.created_at)}</div>
+                </div>
               </div>
             </div>
-            <div className="profile-row">
-              <Mail size={18} className="profile-icon" aria-hidden />
-              <div>
-                <div className="profile-label">Email</div>
-                <div className="profile-value">{u?.email ?? '—'}</div>
+          </Card>
+
+          <Card>
+            <button type="button" className="pw-toggle" onClick={() => setPwOpen((v) => !v)}>
+              <KeyRound size={18} />
+              <span>Change password</span>
+              <ChevronDown size={18} className={`pw-chevron ${pwOpen ? 'pw-chevron-open' : ''}`} />
+            </button>
+            {pwOpen && (
+              <div className="pw-body">
+                {pwMessage && <Alert type="success" onDismiss={() => setPwMessage('')}>{pwMessage}</Alert>}
+                {pwError && <Alert type="error" onDismiss={() => setPwError('')}>{pwError}</Alert>}
+                <form className="stack" onSubmit={handleChangePassword} noValidate>
+                  <Input
+                    name="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    label="Current password"
+                    value={currentPw}
+                    onChange={(e) => setCurrentPw(e.target.value)}
+                    error={pwErrors.currentPw}
+                  />
+                  <Input
+                    name="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    label="New password"
+                    hint="At least 6 characters"
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    error={pwErrors.newPw}
+                  />
+                  <Input
+                    name="confirmNewPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    label="Confirm new password"
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                    error={pwErrors.confirmPw}
+                  />
+                  <Button type="submit" loading={pwLoading}>
+                    Update password
+                  </Button>
+                </form>
               </div>
-            </div>
-            <div className="profile-row">
-              <Hash size={18} className="profile-icon" aria-hidden />
-              <div>
-                <div className="profile-label">User ID</div>
-                <div className="profile-value mono">{u?.user_id ?? u?._id ?? '—'}</div>
-              </div>
-            </div>
-            <div className="profile-row">
-              <Calendar size={18} className="profile-icon" aria-hidden />
-              <div>
-                <div className="profile-label">Member since</div>
-                <div className="profile-value">{formatDate(u?.created_at)}</div>
-              </div>
-            </div>
-          </div>
-          <p className="profile-note">Updates to username or email are not available in the current API. Use the mobile app or contact your administrator if you need changes.</p>
-        </Card>
+            )}
+          </Card>
+        </>
       )}
     </div>
   )

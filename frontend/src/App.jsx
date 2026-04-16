@@ -9,6 +9,7 @@ import Detection from './pages/Detection'
 import Profile from './pages/Profile'
 import Plants from './pages/Plants'
 import Weather from './pages/Weather'
+import ForgotPassword from './pages/ForgotPassword'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, ready } = useAuth()
@@ -63,6 +64,16 @@ export default function App() {
           <PublicOnly>
             <AuthLayout>
               <Signup />
+            </AuthLayout>
+          </PublicOnly>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicOnly>
+            <AuthLayout>
+              <ForgotPassword />
             </AuthLayout>
           </PublicOnly>
         }

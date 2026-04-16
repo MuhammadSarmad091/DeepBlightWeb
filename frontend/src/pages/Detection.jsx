@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch, isoLocalNoMs } from '../api/client'
-import { Card, Button, Alert } from '../components/ui'
+import { Card, Button, Alert, ConfirmDialog } from '../components/ui'
 
 const LEAF_CLASSES = ['Early_Blight', 'Healthy', 'Late_Blight', 'Leaf_Roll', 'Verticillium_Wilt']
 
@@ -64,8 +65,12 @@ export default function Detection() {
   const { token, user } = useAuth()
   const userId = user?.user_id
   const fileInputRef = useRef(null)
+  const location = useLocation()
 
-  const [mode, setMode] = useState('leaf')
+  const [mode, setMode] = useState(() => {
+    const s = location.state?.mode
+    return s === 'pest' ? 'pest' : 'leaf'
+  })
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [fileError, setFileError] = useState('')
@@ -83,6 +88,8 @@ export default function Detection() {
   const [historyError, setHistoryError] = useState('')
   const [historyLoading, setHistoryLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deleteAlert, setDeleteAlert] = useState('')
 
   const basePath = mode === 'leaf' ? '/leafscan' : '/insectscan'
 
@@ -242,8 +249,9 @@ export default function Detection() {
   }
 
   async function deleteScan(scanId) {
-    if (!window.confirm('Delete this scan from history?')) return
+    setConfirmDeleteId(null)
     setDeletingId(scanId)
+    setDeleteAlert('')
     const { ok, data, errorMessage, status } = await apiFetch(`${basePath}/delete`, {
       method: 'DELETE',
       token,
@@ -251,8 +259,8 @@ export default function Detection() {
     })
     setDeletingId(null)
     if (!ok) {
-      if (status === 404) alert(data?.error || 'Scan not found.')
-      else alert(errorMessage || 'Delete failed.')
+      if (status === 404) setDeleteAlert(data?.error || 'Scan not found.')
+      else setDeleteAlert(errorMessage || 'Delete failed.')
       return
     }
     loadHistory()
@@ -332,8 +340,6 @@ export default function Detection() {
                   ))}
                 </div>
               )}
-              <p className="result-meta">Next scan ID (for saving): <code>{result.next_scan_id}</code></p>
-
               <div className="btn-row">
                 <Button variant="secondary" onClick={saveScan} disabled={saving} loading={saving}>
                   <Save size={18} /> Save to history
@@ -373,7 +379,7 @@ export default function Detection() {
                   </div>
                   {!s.image_exists && <div className="history-warn">Image missing on server</div>}
                 </div>
-                <button type="button" className="icon-btn danger" disabled={deletingId === s.scan_id} onClick={() => deleteScan(s.scan_id)} aria-label="Delete scan">
+                <button type="button" className="icon-btn danger" disabled={deletingId === s.scan_id} onClick={() => setConfirmDeleteId(s.scan_id)} aria-label="Delete scan">
                   {deletingId === s.scan_id ? <Loader2 className="spin" size={18} /> : <Trash2 size={18} />}
                 </button>
               </li>
@@ -382,6 +388,17 @@ export default function Detection() {
           </ul>
         </Card>
       </div>
+
+      {deleteAlert && <Alert type="error" onDismiss={() => setDeleteAlert('')}>{deleteAlert}</Alert>}
+
+      <ConfirmDialog
+        open={confirmDeleteId != null}
+        title="Delete scan"
+        message="Are you sure you want to delete this scan? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => deleteScan(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   )
 }

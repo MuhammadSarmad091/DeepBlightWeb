@@ -32,7 +32,7 @@ def generate_verification_code(length=6):
     return "".join(random.choices(string.digits, k=length))
 
 
-def setup_auth_routes(app, users_col, unverified_users_col, mail):
+def setup_auth_routes(app, users_col, unverified_users_col, mail, password_resets_col=None):
     """
     Setup authentication routes for the Flask app.
     
@@ -151,6 +151,101 @@ def setup_auth_routes(app, users_col, unverified_users_col, mail):
         user_data = {"user_id": user_id, "username": user.get("username"), "email": user.get("email")}
         return jsonify({"message": "login successful", "token": token, "user": user_data})
 
-    
+
+
+    @auth_bp.route("/forgot-password", methods=["POST"])
+    def forgot_password():
+        """Send a 6-digit reset code to the user's email"""
+        data = request.get_json() or {}
+        email = (data.get("email") or "").lower().strip()
+
+        if not email:
+            return jsonify({"error": "email is required"}), 400
+
+        user = users_col.find_one({"email": email})
+        if not user:
+            return jsonify({"message": "If this email exists, a reset code has been sent."}), 200
+
+        code = generate_verification_code()
+
+        if password_resets_col is not None:
+            password_resets_col.update_one(
+                {"email": email},
+                {"$set": {"code": code, "created_at": datetime.utcnow()}},
+                upsert=True,
+            )
+
+        try:
+            msg = Message(
+                subject="DeepBlight Password Reset Code",
+                recipients=[email],
+                body=f"Your password reset code is: {code}\n\nThis code will expire in 1 hour. If you did not request a password reset, ignore this email.",
+            )
+            mail.send(msg)
+        except Exception as e:
+            print(f"Failed to send reset email: {e}")
+            return jsonify({"error": "Could not send reset email. Try again later."}), 500
+
+        return jsonify({"message": "If this email exists, a reset code has been sent."}), 200
+
+    @auth_bp.route("/reset-password", methods=["POST"])
+    def reset_password():
+        """Verify reset code and set a new password"""
+        data = request.get_json() or {}
+        email = (data.get("email") or "").lower().strip()
+        code = data.get("code") or ""
+        new_password = data.get("new_password") or ""
+
+        if not email or not code or not new_password:
+            return jsonify({"error": "email, code, and new_password are required"}), 400
+        if len(new_password) < 6:
+            return jsonify({"error": "new password must be at least 6 characters"}), 400
+
+        if password_resets_col is None:
+            return jsonify({"error": "Password reset not configured"}), 500
+
+        record = password_resets_col.find_one({"email": email, "code": code})
+        if not record:
+            return jsonify({"error": "Invalid or expired reset code."}), 404
+
+        hashed = generate_password_hash(new_password)
+        result = users_col.update_one({"email": email}, {"$set": {"password": hashed}})
+        if result.matched_count == 0:
+            return jsonify({"error": "User not found."}), 404
+
+        password_resets_col.delete_many({"email": email})
+        return jsonify({"message": "Password has been reset successfully. Please log in."}), 200
+
+    @auth_bp.route("/change-password", methods=["POST"])
+    def change_password():
+        """Change password for an authenticated user (requires Bearer token)"""
+        from auth.decorators import token_required
+
+        @token_required(users_col, app)
+        def _inner():
+            data = request.get_json() or {}
+            current_password = data.get("current_password") or ""
+            new_password = data.get("new_password") or ""
+
+            if not current_password or not new_password:
+                return jsonify({"error": "current_password and new_password are required"}), 400
+            if len(new_password) < 6:
+                return jsonify({"error": "new password must be at least 6 characters"}), 400
+
+            user_id = request.user.get("user_id")
+            from bson import ObjectId
+            user = users_col.find_one({"_id": ObjectId(user_id)})
+            if not user:
+                return jsonify({"error": "User not found"}), 404
+
+            if not check_password_hash(user["password"], current_password):
+                return jsonify({"error": "Current password is incorrect."}), 401
+
+            hashed = generate_password_hash(new_password)
+            users_col.update_one({"_id": ObjectId(user_id)}, {"$set": {"password": hashed}})
+            return jsonify({"message": "Password changed successfully."}), 200
+
+        return _inner()
+
     # Register the blueprint with the app
     app.register_blueprint(auth_bp)
