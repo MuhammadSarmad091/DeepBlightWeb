@@ -932,6 +932,15 @@ a.btn {
   font-size: 0.85rem;
 }
 
+.prob-name {
+  min-width: 0;
+  line-height: 1.25;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .prob-bar-wrap {
   height: 8px;
   background: rgba(255, 255, 255, 0.08);

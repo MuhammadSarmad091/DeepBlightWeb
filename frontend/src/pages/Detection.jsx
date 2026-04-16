@@ -1,16 +1,47 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch, isoLocalNoMs } from '../api/client'
 import { Card, Button, Alert } from '../components/ui'
 
 const LEAF_CLASSES = ['Early_Blight', 'Healthy', 'Late_Blight', 'Leaf_Roll', 'Verticillium_Wilt']
+
+/** Must match backend `ml_services/prediction.py` PEST_CLASS_NAMES order. */
+const PEST_CLASS_NAMES = [
+  'Agrotis ipsilon (Hufnagel)',
+  'Amrasca devastans (Distant)',
+  'Aphis gossypii Glover',
+  'Bemisia tabaci (Gennadius)',
+  'Brachytrypes portentosus Lichtenstein',
+  'Epilachna vigintioctopunctata (Fabricius)',
+  'Myzus persicae (Sulzer)',
+  'Phthorimaea operculella (Zeller)',
+]
+
 const MAX_FILE_BYTES = 12 * 1024 * 1024
 
 function formatLabel(s) {
   if (!s) return ''
   if (s === 'noninsect') return 'No insect detected'
   return String(s).replace(/_/g, ' ')
+}
+
+/** Labels for probability rows (pest / binary detector). */
+function probRowLabel(mode, name) {
+  if (mode === 'leaf') return formatLabel(name)
+  if (name === 'insect') return 'Insect'
+  if (name === 'noninsect') return 'Non-insect'
+  return String(name)
+}
+
+function probabilityClassNames(mode, result, probs) {
+  if (!Array.isArray(probs) || probs.length === 0) return []
+  if (mode === 'leaf') return LEAF_CLASSES.slice(0, probs.length)
+  if (Array.isArray(result.class_names) && result.class_names.length >= probs.length) {
+    return result.class_names.slice(0, probs.length)
+  }
+  if (probs.length === 2) return ['insect', 'noninsect']
+  return PEST_CLASS_NAMES.slice(0, probs.length)
 }
 
 function validateImageFile(file) {
@@ -20,9 +51,19 @@ function validateImageFile(file) {
   return null
 }
 
+/** Prefer base64 from authenticated getimages (local disk + S3 without CORS); else presigned HTTP URL. */
+function historyThumbnailSrc(scan, thumbMap) {
+  const ref = scan.image_ref
+  if (ref && thumbMap[ref]) return thumbMap[ref]
+  const u = scan.image_url
+  if (typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))) return u
+  return ''
+}
+
 export default function Detection() {
   const { token, user } = useAuth()
   const userId = user?.user_id
+  const fileInputRef = useRef(null)
 
   const [mode, setMode] = useState('leaf')
   const [file, setFile] = useState(null)
@@ -38,6 +79,7 @@ export default function Detection() {
   const [saving, setSaving] = useState(false)
 
   const [history, setHistory] = useState([])
+  const [thumbMap, setThumbMap] = useState({})
   const [historyError, setHistoryError] = useState('')
   const [historyLoading, setHistoryLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -47,14 +89,35 @@ export default function Detection() {
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true)
     setHistoryError('')
+    setThumbMap({})
     const { ok, data, errorMessage } = await apiFetch(`${basePath}/getall`, { token })
-    setHistoryLoading(false)
     if (!ok) {
+      setHistoryLoading(false)
       setHistoryError(errorMessage || 'Could not load history.')
       setHistory([])
       return
     }
-    setHistory(data?.scans ?? [])
+    const scans = data?.scans ?? []
+    setHistory(scans)
+
+    const paths = [...new Set(scans.map((s) => s.image_ref).filter(Boolean))]
+    if (paths.length) {
+      const imgRes = await apiFetch(`${basePath}/getimages`, {
+        method: 'POST',
+        token,
+        body: { paths },
+      })
+      if (imgRes.ok && Array.isArray(imgRes.data?.images)) {
+        const next = {}
+        for (const img of imgRes.data.images) {
+          if (img.found && img.image_data && img.path != null) {
+            next[img.path] = `data:image/jpeg;base64,${img.image_data}`
+          }
+        }
+        setThumbMap(next)
+      }
+    }
+    setHistoryLoading(false)
   }, [token, basePath])
 
   useEffect(() => {
@@ -67,6 +130,11 @@ export default function Detection() {
     }
   }, [preview])
 
+  function resetFileInput() {
+    const el = fileInputRef.current
+    if (el) el.value = ''
+  }
+
   function onFileChange(e) {
     const f = e.target.files?.[0]
     setResult(null)
@@ -77,12 +145,15 @@ export default function Detection() {
     if (!f) {
       setFile(null)
       setPreview(null)
+      resetFileInput()
       return
     }
     const err = validateImageFile(f)
     setFileError(err || '')
     setFile(err ? null : f)
     setPreview(err ? null : URL.createObjectURL(f))
+    // Allow choosing the same file again (browser skips change if value unchanged)
+    resetFileInput()
   }
 
   function clearFile() {
@@ -93,6 +164,7 @@ export default function Detection() {
     setAnalyzeError('')
     setSaveMessage('')
     setSaveError('')
+    resetFileInput()
   }
 
   async function analyze() {
@@ -212,7 +284,7 @@ export default function Detection() {
         <Card title={mode === 'leaf' ? 'Leaf image' : 'Insect image'}>
           <div className="upload-zone">
             <label className="upload-label">
-              <input type="file" accept="image/*" className="sr-only" onChange={onFileChange} />
+              <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFileChange} />
               <span className="upload-prompt">
                 <Upload size={20} />
                 Drop an image or click to browse
@@ -245,11 +317,13 @@ export default function Detection() {
                 <span className="result-class">{formatLabel(result.predicted_class)}</span>
                 <span className="result-conf">{((result.confidence_score ?? 0) * 100).toFixed(1)}% confidence</span>
               </div>
-              {mode === 'leaf' && Array.isArray(probs) && probs.length > 0 && (
+              {Array.isArray(probs) && probs.length > 0 && (
                 <div className="prob-list">
-                  {LEAF_CLASSES.map((name, i) => (
-                    <div key={name} className="prob-row">
-                      <span>{formatLabel(name)}</span>
+                  {probabilityClassNames(mode, result, probs).map((name, i) => (
+                    <div key={`${name}-${i}`} className="prob-row">
+                      <span className="prob-name" title={typeof name === 'string' ? name : ''}>
+                        {probRowLabel(mode, name)}
+                      </span>
                       <div className="prob-bar-wrap">
                         <div className="prob-bar" style={{ width: `${Math.min(100, (probs[i] ?? 0) * 100)}%` }} />
                       </div>
@@ -285,10 +359,12 @@ export default function Detection() {
             </div>
           )}
           <ul className="history-list">
-            {history.map((s) => (
+            {history.map((s) => {
+              const thumbSrc = historyThumbnailSrc(s, thumbMap)
+              return (
               <li key={s.scan_id} className="history-item">
                 <div className="history-thumb">
-                  {s.image_url ? <img src={s.image_url} alt="" /> : <div className="history-thumb-fallback" />}
+                  {thumbSrc ? <img src={thumbSrc} alt="" /> : <div className="history-thumb-fallback" />}
                 </div>
                 <div className="history-body">
                   <div className="history-class">{formatLabel(s.predicted_class)}</div>
@@ -301,7 +377,8 @@ export default function Detection() {
                   {deletingId === s.scan_id ? <Loader2 className="spin" size={18} /> : <Trash2 size={18} />}
                 </button>
               </li>
-            ))}
+              )
+            })}
           </ul>
         </Card>
       </div>

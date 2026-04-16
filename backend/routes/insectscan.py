@@ -16,7 +16,13 @@ from utils.s3_utils import (
     list_files_in_s3,
     generate_presigned_url
 )
-from ml_services.prediction import preprocess_image, detect_insect, classify_pest, BINARY_CLASS_NAMES, PEST_CLASS_NAMES
+from ml_services.prediction import (
+    preprocess_image,
+    detect_insect,
+    classify_pest,
+    BINARY_CLASS_NAMES,
+    PEST_CLASS_NAMES,
+)
 
 # Create the blueprint
 insectscan_bp = Blueprint("insectscan", __name__, url_prefix="/insectscan")
@@ -369,6 +375,7 @@ def setup_insectscan_routes(app, users_col, insectscan_col, token_required_decor
                 # Check if image file exists and convert to presigned URL
                 image_url = scan.get("image_url")
                 scan["image_exists"] = check_image_exists(image_url)
+                scan["image_ref"] = image_url
                 # Convert S3 URL to presigned URL for Android app
                 scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
                 # Include prediction fields if present
@@ -453,6 +460,7 @@ def setup_insectscan_routes(app, users_col, insectscan_col, token_required_decor
                 # Check if image file exists and convert to presigned URL
                 image_url = scan.get("image_url")
                 scan["image_exists"] = check_image_exists(image_url)
+                scan["image_ref"] = image_url
                 # Convert S3 URL to presigned URL for Android app
                 scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
                 # Include prediction fields if present
@@ -540,6 +548,7 @@ def setup_insectscan_routes(app, users_col, insectscan_col, token_required_decor
             # Check if image file exists and convert to presigned URL
             image_url = scan.get("image_url")
             scan["image_exists"] = check_image_exists(image_url)
+            scan["image_ref"] = image_url
             # Convert S3 URL to presigned URL for Android app
             scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
             # Include prediction fields if present
@@ -573,7 +582,14 @@ def setup_insectscan_routes(app, users_col, insectscan_col, token_required_decor
           - userid: string (required) -- must match authenticated user
 
         Returns:
-          - 200: {"predicted_class": str, "confidence_score": float, "next_scan_id": str}
+          - 200: {
+                "predicted_class": str,
+                "confidence_score": float,
+                "next_scan_id": str,
+                "probabilities": [float, ...],
+                "class_names": [str, ...],
+            }
+            (For "noninsect", probabilities are the insect vs non-insect detector; for a pest, they are all pest classes.)
           - 400/401/403/500 on errors
         """
         try:
@@ -625,24 +641,28 @@ def setup_insectscan_routes(app, users_col, insectscan_col, token_required_decor
 
                 # Perform Insect Detection
                 img_array_detector = preprocess_image(tmp_path, target_size=(150, 150))
-                label, confidence = detect_insect(detector_model, img_array_detector)
+                label, confidence, det_probs = detect_insect(detector_model, img_array_detector)
                 
                 if label == 'noninsect':
                     response = {
                         "predicted_class": "noninsect",
                         "confidence_score": float(confidence),
-                        "next_scan_id": next_scan_id
+                        "next_scan_id": next_scan_id,
+                        "probabilities": det_probs,
+                        "class_names": list(BINARY_CLASS_NAMES),
                     }
                     return jsonify(response), 200
                 
                 # Perform Pest Classification
                 img_array_classifier = preprocess_image(tmp_path, target_size=(224, 224))
-                pest_label, pest_conf = classify_pest(classifier_model, img_array_classifier)
+                pest_label, pest_conf, pest_probs = classify_pest(classifier_model, img_array_classifier)
                 
                 response = {
                     "predicted_class": pest_label,
                     "confidence_score": float(pest_conf),
-                    "next_scan_id": next_scan_id
+                    "next_scan_id": next_scan_id,
+                    "probabilities": pest_probs,
+                    "class_names": list(PEST_CLASS_NAMES),
                 }
                 return jsonify(response), 200
             finally:

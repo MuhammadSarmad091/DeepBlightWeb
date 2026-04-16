@@ -377,7 +377,9 @@ def setup_leafscan_routes(app, users_col, leafscan_col, token_required_decorator
                 # Check if image file exists and convert to presigned URL
                 image_url = scan.get("image_url")
                 scan["image_exists"] = check_image_exists(image_url)
-                # Convert S3 URL to presigned URL for Android app
+                # Original storage URI (s3://... or local path) for /getimages and web clients
+                scan["image_ref"] = image_url
+                # Convert S3 URL to presigned URL for mobile / direct img src when CORS allows
                 scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
                 # Include prediction fields if present
                 scan["predicted_class"] = scan.get("predicted_class")
@@ -461,6 +463,7 @@ def setup_leafscan_routes(app, users_col, leafscan_col, token_required_decorator
                 # Check if image file exists and convert to presigned URL
                 image_url = scan.get("image_url")
                 scan["image_exists"] = check_image_exists(image_url)
+                scan["image_ref"] = image_url
                 # Convert S3 URL to presigned URL for Android app
                 scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
                 # Include prediction fields if present
@@ -548,6 +551,7 @@ def setup_leafscan_routes(app, users_col, leafscan_col, token_required_decorator
             # Check if image file exists and convert to presigned URL
             image_url = scan.get("image_url")
             scan["image_exists"] = check_image_exists(image_url)
+            scan["image_ref"] = image_url
             # Convert S3 URL to presigned URL for Android app
             scan["image_url"] = convert_s3_url_to_presigned(image_url) if image_url else None
             # Include prediction fields if present

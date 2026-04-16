@@ -3,6 +3,5 @@ venv/
 .venv/
 .env
 *.h5
-storage\
-logs\
-storage\
+storage/
+logs/

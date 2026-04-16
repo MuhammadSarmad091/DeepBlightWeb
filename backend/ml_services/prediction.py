@@ -35,24 +35,20 @@ def preprocess_image(img_path, target_size=(224, 224)):
 
 
 def detect_insect(detector_model, img_array):
-    preds = detector_model.predict(img_array)
-    
-    class_idx = np.argmax(preds[0])
-    confidence = preds[0][class_idx]
-    
+    preds = detector_model.predict(img_array, verbose=0)
+    probs = preds[0]
+    class_idx = int(np.argmax(probs))
+    confidence = float(probs[class_idx])
     label = BINARY_CLASS_NAMES[class_idx]
-    
-    return label, confidence
+    return label, confidence, probs.tolist()
 
 def classify_pest(classifier_model, img_array):
-    preds = classifier_model.predict(img_array)
-    
-    class_idx = np.argmax(preds[0])
-    confidence = preds[0][class_idx]
-    
+    preds = classifier_model.predict(img_array, verbose=0)
+    probs = preds[0]
+    class_idx = int(np.argmax(probs))
+    confidence = float(probs[class_idx])
     label = PEST_CLASS_NAMES[class_idx]
-    
-    return label, confidence
+    return label, confidence, probs.tolist()
 
 def predict_insect(img_path, detector_model, classifier_model):
     
@@ -60,7 +56,7 @@ def predict_insect(img_path, detector_model, classifier_model):
     img_array_low_dim = preprocess_image(img_path,target_size=(150,150))
     
     # ---- Stage 1: Detect Insect ----
-    label, confidence = detect_insect(detector_model, img_array_low_dim)
+    label, confidence, _ = detect_insect(detector_model, img_array_low_dim)
     
     print(f"[Detection] Prediction: {label}")
     print(f"[Detection] Confidence: {confidence*100:.2f}%")
@@ -72,7 +68,7 @@ def predict_insect(img_path, detector_model, classifier_model):
     
     # ---- Stage 2: Classify Pest ----
     img_array_high_dim = preprocess_image(img_path,target_size=(224,224))
-    pest_label, pest_conf = classify_pest(classifier_model, img_array_high_dim)
+    pest_label, pest_conf, _ = classify_pest(classifier_model, img_array_high_dim)
     
     print("\n[Classification] Pest Type:", pest_label)
     print(f"[Classification] Confidence: {pest_conf*100:.2f}%")
