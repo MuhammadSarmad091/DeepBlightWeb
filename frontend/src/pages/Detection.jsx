@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon } from 'lucide-react'
+import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon, Info, ShieldAlert, Stethoscope, X, ChevronDown } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch, isoLocalNoMs } from '../api/client'
 import { Card, Button, Alert, ConfirmDialog } from '../components/ui'
+import { getClassInfo } from '../data/scan-info'
 
 const LEAF_CLASSES = ['Early_Blight', 'Healthy', 'Late_Blight', 'Leaf_Roll', 'Verticillium_Wilt']
 
@@ -61,6 +62,132 @@ function historyThumbnailSrc(scan, thumbMap) {
   return ''
 }
 
+function InfoPanel({ mode, predictedClass }) {
+  const info = getClassInfo(mode, predictedClass)
+  const [expanded, setExpanded] = useState(true)
+  if (!info) return null
+
+  const isLeaf = mode === 'leaf'
+
+  return (
+    <div className="info-panel">
+      <button type="button" className="info-panel-toggle" onClick={() => setExpanded((v) => !v)}>
+        <Info size={18} />
+        <span>{isLeaf ? 'Disease Information' : 'Pest Information'}</span>
+        <ChevronDown size={16} className={`info-chevron ${expanded ? 'info-chevron-open' : ''}`} />
+      </button>
+      {expanded && (
+        <div className="info-panel-body">
+          <h4 className="info-name">{info.name}</h4>
+          {isLeaf && info.pathogen && info.pathogen !== 'None' && (
+            <p className="info-pathogen">Pathogen: <em>{info.pathogen}</em></p>
+          )}
+          {!isLeaf && info.scientificName && info.scientificName !== 'N/A' && (
+            <p className="info-pathogen">Scientific name: <em>{info.scientificName}</em></p>
+          )}
+          {isLeaf && info.severity && (
+            <p className="info-severity">
+              <ShieldAlert size={14} /> Severity: <strong>{info.severity}</strong>
+            </p>
+          )}
+          <p className="info-desc">{info.description}</p>
+
+          {isLeaf && info.symptoms?.length > 0 && info.symptoms[0] !== 'No disease symptoms detected' && (
+            <div className="info-section">
+              <h5>Symptoms</h5>
+              <ul>{info.symptoms.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+          )}
+
+          {!isLeaf && info.damage?.length > 0 && (
+            <div className="info-section">
+              <h5>Damage</h5>
+              <ul>{info.damage.map((d, i) => <li key={i}>{d}</li>)}</ul>
+            </div>
+          )}
+
+          {info.treatment?.length > 0 && (
+            <div className="info-section">
+              <h5><Stethoscope size={14} /> Treatment & Management</h5>
+              <ul>{info.treatment.map((t, i) => <li key={i}>{t}</li>)}</ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function HistoryDetailModal({ scan, mode, thumbMap, onClose }) {
+  if (!scan) return null
+  const thumbSrc = historyThumbnailSrc(scan, thumbMap)
+  const info = getClassInfo(mode, scan.predicted_class)
+  const isLeaf = mode === 'leaf'
+
+  return (
+    <div className="confirm-backdrop" onClick={onClose}>
+      <div className="history-detail-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="history-detail-header">
+          <h3>Scan Details</h3>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        {thumbSrc && (
+          <div className="history-detail-img">
+            <img src={thumbSrc} alt="" />
+          </div>
+        )}
+
+        <div className="history-detail-result">
+          <span className="result-class">{formatLabel(scan.predicted_class)}</span>
+          <span className="result-conf">{((scan.confidence_score ?? 0) * 100).toFixed(1)}% confidence</span>
+        </div>
+
+        <div className="history-detail-meta">
+          {scan.datetime && <span>Scanned: {new Date(scan.datetime).toLocaleString()}</span>}
+        </div>
+
+        {info && (
+          <div className="history-detail-info">
+            <h4 className="info-name">{info.name}</h4>
+            {isLeaf && info.pathogen && info.pathogen !== 'None' && (
+              <p className="info-pathogen">Pathogen: <em>{info.pathogen}</em></p>
+            )}
+            {!isLeaf && info.scientificName && info.scientificName !== 'N/A' && (
+              <p className="info-pathogen">Scientific name: <em>{info.scientificName}</em></p>
+            )}
+            {isLeaf && info.severity && (
+              <p className="info-severity"><ShieldAlert size={14} /> Severity: <strong>{info.severity}</strong></p>
+            )}
+            <p className="info-desc">{info.description}</p>
+
+            {isLeaf && info.symptoms?.length > 0 && info.symptoms[0] !== 'No disease symptoms detected' && (
+              <div className="info-section">
+                <h5>Symptoms</h5>
+                <ul>{info.symptoms.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+            )}
+            {!isLeaf && info.damage?.length > 0 && (
+              <div className="info-section">
+                <h5>Damage</h5>
+                <ul>{info.damage.map((d, i) => <li key={i}>{d}</li>)}</ul>
+              </div>
+            )}
+            {info.treatment?.length > 0 && (
+              <div className="info-section">
+                <h5><Stethoscope size={14} /> Treatment & Management</h5>
+                <ul>{info.treatment.map((t, i) => <li key={i}>{t}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Detection() {
   const { token, user } = useAuth()
   const userId = user?.user_id
@@ -90,6 +217,7 @@ export default function Detection() {
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [deleteAlert, setDeleteAlert] = useState('')
+  const [selectedScan, setSelectedScan] = useState(null)
 
   const basePath = mode === 'leaf' ? '/leafscan' : '/insectscan'
 
@@ -340,6 +468,8 @@ export default function Detection() {
                   ))}
                 </div>
               )}
+              <InfoPanel mode={mode} predictedClass={result.predicted_class} />
+
               <div className="btn-row">
                 <Button variant="secondary" onClick={saveScan} disabled={saving} loading={saving}>
                   <Save size={18} /> Save to history
@@ -368,7 +498,7 @@ export default function Detection() {
             {history.map((s) => {
               const thumbSrc = historyThumbnailSrc(s, thumbMap)
               return (
-              <li key={s.scan_id} className="history-item">
+              <li key={s.scan_id} className="history-item" role="button" tabIndex={0} onClick={() => setSelectedScan(s)} onKeyDown={(e) => e.key === 'Enter' && setSelectedScan(s)}>
                 <div className="history-thumb">
                   {thumbSrc ? <img src={thumbSrc} alt="" /> : <div className="history-thumb-fallback" />}
                 </div>
@@ -379,7 +509,7 @@ export default function Detection() {
                   </div>
                   {!s.image_exists && <div className="history-warn">Image missing on server</div>}
                 </div>
-                <button type="button" className="icon-btn danger" disabled={deletingId === s.scan_id} onClick={() => setConfirmDeleteId(s.scan_id)} aria-label="Delete scan">
+                <button type="button" className="icon-btn danger" disabled={deletingId === s.scan_id} onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(s.scan_id) }} aria-label="Delete scan">
                   {deletingId === s.scan_id ? <Loader2 className="spin" size={18} /> : <Trash2 size={18} />}
                 </button>
               </li>
@@ -398,6 +528,13 @@ export default function Detection() {
         confirmLabel="Delete"
         onConfirm={() => deleteScan(confirmDeleteId)}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <HistoryDetailModal
+        scan={selectedScan}
+        mode={mode}
+        thumbMap={thumbMap}
+        onClose={() => setSelectedScan(null)}
       />
     </div>
   )

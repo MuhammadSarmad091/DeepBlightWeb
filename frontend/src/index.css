@@ -71,6 +71,10 @@ a:hover {
   text-decoration: underline;
 }
 
+a.stat-card-link:hover {
+  text-decoration: none;
+}
+
 .mono {
   font-family: ui-monospace, monospace;
   font-size: 0.9em;
@@ -776,7 +780,9 @@ a.btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.stat-card-link:hover {
+.stat-card-link:hover,
+.stat-card-link:focus {
+  text-decoration: none;
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
@@ -1218,6 +1224,178 @@ a.btn {
 .history-warn {
   font-size: 0.72rem;
   color: var(--warning);
+}
+
+.history-item[role="button"] {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.history-item[role="button"]:hover {
+  background: rgba(62, 207, 142, 0.06);
+  border-color: rgba(62, 207, 142, 0.25);
+}
+
+/* Info Panel (inline, below result) */
+.info-panel {
+  margin-top: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.info-panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.info-panel-toggle:hover {
+  background: rgba(62, 207, 142, 0.06);
+}
+
+.info-chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.info-chevron-open {
+  transform: rotate(180deg);
+}
+
+.info-panel-body {
+  padding: 0 1rem 1rem;
+}
+
+.info-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+
+.info-pathogen {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 0.35rem;
+}
+
+.info-severity {
+  font-size: 0.85rem;
+  color: #f5a623;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.info-desc {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.info-section {
+  margin-bottom: 0.75rem;
+}
+
+.info-section h5 {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  list-style: disc;
+}
+
+.info-section li {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
+}
+
+/* History Detail Modal */
+.history-detail-dialog {
+  background: #141e1a;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 520px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.history-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: #141e1a;
+  z-index: 2;
+}
+
+.history-detail-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.history-detail-header .icon-btn {
+  position: static;
+}
+
+.history-detail-img {
+  padding: 1rem 1.25rem 0;
+}
+
+.history-detail-img img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #050a08;
+}
+
+.history-detail-result {
+  padding: 1rem 1.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.history-detail-meta {
+  padding: 0.35rem 1.25rem 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.history-detail-info {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
 }
 
 /* Plants */
