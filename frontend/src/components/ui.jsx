@@ -1,15 +1,17 @@
 import { forwardRef } from 'react'
 
-export function Button({ children, variant = 'primary', className = '', disabled, loading, type = 'button', ...rest }) {
+export function Button({ children, variant = 'primary', className = '', disabled, loading, loadingLabel, type = 'button', ...rest }) {
   const v = {
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     ghost: 'btn-ghost',
     danger: 'btn-danger',
   }[variant] || 'btn-primary'
+  const showLoading = Boolean(loading)
+  const loadingContent = loadingLabel !== undefined && loadingLabel !== null ? loadingLabel : 'Working…'
   return (
-    <button type={type} className={`btn ${v} ${className}`.trim()} disabled={disabled || loading} {...rest}>
-      {loading ? <span className="btn-loading">Working…</span> : children}
+    <button type={type} className={`btn ${v} ${className}`.trim()} disabled={disabled || loading} aria-busy={showLoading || undefined} {...rest}>
+      {showLoading ? <span className="btn-loading">{loadingContent}</span> : children}
     </button>
   )
 }

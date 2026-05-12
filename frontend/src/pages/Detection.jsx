@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon, Info, ShieldAlert, Stethoscope, X, ChevronDown } from 'lucide-react'
+import { Leaf, Bug, Upload, Trash2, Save, Loader2, ImageIcon, Info, ShieldAlert, Stethoscope, X, ChevronDown, ScanLine } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { apiFetch, isoLocalNoMs } from '../api/client'
 import { Card, Button, Alert, ConfirmDialog } from '../components/ui'
+import { AnalysisProgress } from '../components/AnalysisProgress'
 import { getClassInfo } from '../data/scan-info'
 
 const LEAF_CLASSES = ['Early_Blight', 'Healthy', 'Late_Blight', 'Leaf_Roll', 'Verticillium_Wilt']
@@ -439,10 +440,23 @@ export default function Detection() {
           </div>
 
           <div className="btn-row">
-            <Button onClick={analyze} disabled={!file || analyzing} loading={analyzing}>
+            <Button
+              onClick={analyze}
+              disabled={!file || analyzing}
+              loading={analyzing}
+              loadingLabel={
+                <span className="btn-loading-inline">
+                  <Loader2 className="spin" size={18} aria-hidden />
+                  Analyzing…
+                </span>
+              }
+            >
+              <ScanLine size={18} aria-hidden />
               Run analysis
             </Button>
           </div>
+
+          {analyzing && <AnalysisProgress mode={mode} />}
 
           {analyzeError && <Alert type="error">{analyzeError}</Alert>}
 
@@ -471,7 +485,18 @@ export default function Detection() {
               <InfoPanel mode={mode} predictedClass={result.predicted_class} />
 
               <div className="btn-row">
-                <Button variant="secondary" onClick={saveScan} disabled={saving} loading={saving}>
+                <Button
+                  variant="secondary"
+                  onClick={saveScan}
+                  disabled={saving}
+                  loading={saving}
+                  loadingLabel={
+                    <span className="btn-loading-inline">
+                      <Loader2 className="spin" size={18} aria-hidden />
+                      Saving…
+                    </span>
+                  }
+                >
                   <Save size={18} /> Save to history
                 </Button>
               </div>
