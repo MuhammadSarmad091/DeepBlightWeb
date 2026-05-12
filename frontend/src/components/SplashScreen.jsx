@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Leaf, Bug, ScanLine } from 'lucide-react'
+import { Leaf } from 'lucide-react'
 
 const MIN_VISIBLE_MS = 1350
 const EXIT_MS = 480
@@ -21,19 +21,13 @@ function SplashPanel({ exiting }) {
       <div className="splash-grid" aria-hidden />
       <div className="splash-content">
         <div className="splash-logo-ring" aria-hidden>
-          <span className="splash-logo-ring__orbit" />
           <span className="splash-logo-ring__glow" />
-        </div>
-        <div className="splash-mark">
-          <span className="splash-mark__icon splash-mark__icon--leaf">
-            <Leaf size={28} strokeWidth={2} aria-hidden />
-          </span>
-          <span className="splash-mark__icon splash-mark__icon--bug">
-            <Bug size={22} strokeWidth={2} aria-hidden />
-          </span>
-          <span className="splash-mark__scan">
-            <ScanLine size={20} strokeWidth={2} aria-hidden />
-          </span>
+          <span className="splash-logo-ring__orbit" />
+          <div className="splash-mark">
+            <span className="splash-mark__leaf" aria-hidden>
+              <Leaf size={36} strokeWidth={2} />
+            </span>
+          </div>
         </div>
         <h1 className="splash-title">DeepBlight</h1>
         <p className="splash-tagline">Potato leaf &amp; pest intelligence</p>

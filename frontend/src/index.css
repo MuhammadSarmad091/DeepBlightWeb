@@ -757,6 +757,7 @@ a.btn {
   color: var(--text-muted);
   font-size: 0.92rem;
   margin-bottom: 1.5rem;
+  animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .hero-banner svg {
@@ -1811,14 +1812,16 @@ a.btn {
 
 .splash-logo-ring {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 128px;
+  height: 128px;
   margin: 0 auto 1.25rem;
+  flex-shrink: 0;
 }
 
 .splash-logo-ring__glow {
   position: absolute;
-  inset: 12%;
+  inset: 10%;
+  z-index: 0;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(62, 207, 142, 0.35), transparent 65%);
   filter: blur(12px);
@@ -1840,82 +1843,40 @@ a.btn {
 .splash-logo-ring__orbit {
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: 50%;
   border: 2px solid rgba(62, 207, 142, 0.2);
   border-top-color: var(--accent);
   animation: spin 1.35s linear infinite;
+  pointer-events: none;
 }
 
 .splash-mark {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.15rem;
+  pointer-events: none;
 }
 
-.splash-mark__icon,
-.splash-mark__scan {
+.splash-mark__leaf {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
   color: var(--accent);
-  filter: drop-shadow(0 4px 20px rgba(62, 207, 142, 0.35));
-}
-
-.splash-mark__icon--leaf {
+  filter: drop-shadow(0 4px 20px rgba(62, 207, 142, 0.4));
   animation: splash-float-a 2.8s ease-in-out infinite;
-}
-
-.splash-mark__icon--bug {
-  margin-top: 10px;
-  margin-left: -6px;
-  color: var(--warning);
-  animation: splash-float-b 2.6s ease-in-out infinite 0.2s;
-}
-
-.splash-mark__scan {
-  position: absolute;
-  bottom: 14px;
-  right: 18px;
-  width: 36px;
-  height: 36px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(62, 207, 142, 0.35);
-  animation: splash-scan 2.2s ease-in-out infinite;
 }
 
 @keyframes splash-float-a {
   0%,
   100% {
-    transform: translateY(0) rotate(-4deg);
+    transform: translateY(0) rotate(-3deg);
   }
   50% {
-    transform: translateY(-6px) rotate(2deg);
-  }
-}
-
-@keyframes splash-float-b {
-  0%,
-  100% {
-    transform: translateY(0) rotate(5deg);
-  }
-  50% {
-    transform: translateY(5px) rotate(-3deg);
-  }
-}
-
-@keyframes splash-scan {
-  0%,
-  100% {
-    opacity: 0.85;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
+    transform: translateY(-5px) rotate(2deg);
   }
 }
 
@@ -2238,16 +2199,11 @@ a.btn {
   }
 }
 
-  animation: card-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .splash-content,
   .splash-logo-ring__orbit,
   .splash-logo-ring__glow,
-  .splash-mark__icon--leaf,
-  .splash-mark__icon--bug,
-  .splash-mark__scan,
+  .splash-mark__leaf,
   .splash-bar__fill,
   .analysis-progress,
   .analysis-progress__pulse,
