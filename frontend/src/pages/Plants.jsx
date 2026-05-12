@@ -6,6 +6,39 @@ import { Card, Button, Input, Alert, Spinner } from '../components/ui'
 
 const LS_DRAFT = 'deepblight_plants_q'
 
+/**
+ * Trefle paginates with `meta.total` and `links` (first/last/next/self). Some clients
+ * expect `meta.last_page`, but that field is often absent — then `?? 1` breaks pagination.
+ */
+function pageFromTrefleHref(href) {
+  if (!href || typeof href !== 'string') return null
+  try {
+    const u = new URL(href.includes('://') ? href : `https://trefle.io${href}`)
+    const p = u.searchParams.get('page')
+    if (p == null || p === '') return null
+    const n = Number.parseInt(p, 10)
+    return Number.isFinite(n) && n >= 1 ? n : null
+  } catch {
+    return null
+  }
+}
+
+function resolveTotalPages(body, perPage) {
+  const meta = body?.meta
+  const links = body?.links
+  if (meta && typeof meta === 'object') {
+    if (typeof meta.last_page === 'number' && Number.isFinite(meta.last_page) && meta.last_page >= 1) {
+      return meta.last_page
+    }
+    if (typeof meta.total === 'number' && Number.isFinite(meta.total) && meta.total >= 0 && perPage > 0) {
+      return Math.max(1, Math.ceil(meta.total / perPage))
+    }
+  }
+  const fromLast = typeof links?.last === 'string' ? pageFromTrefleHref(links.last) : null
+  if (fromLast != null) return fromLast
+  return null
+}
+
 /** Trefle often nests taxa as { name, common_name, slug, id, links }. */
 function plantText(value) {
   if (value == null || value === '') return ''
@@ -142,8 +175,9 @@ export default function Plants() {
   }
 
   const plants = data?.data ?? []
-  const meta = data?.meta
-  const totalPages = meta?.last_page ?? 1
+  const totalPages = resolveTotalPages(data, perPage)
+  const hasNextPage =
+    Boolean(data?.links?.next) || (typeof totalPages === 'number' && page < totalPages)
 
   return (
     <div className="page">
@@ -205,9 +239,9 @@ export default function Plants() {
             </Button>
             <span className="pagination-info">
               Page {page}
-              {totalPages ? ` of ${totalPages}` : ''}
+              {typeof totalPages === 'number' ? ` of ${totalPages}` : ''}
             </span>
-            <Button type="button" variant="secondary" disabled={loading || page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <Button type="button" variant="secondary" disabled={loading || !hasNextPage} onClick={() => setPage((p) => p + 1)}>
               Next <ChevronRight size={18} />
             </Button>
           </div>
