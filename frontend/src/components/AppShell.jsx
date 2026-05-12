@@ -93,13 +93,17 @@ export function AuthLayout({ children }) {
     <div className="auth-layout">
       <div className="auth-decoration" aria-hidden>
         <div className="auth-deco-content">
-          <svg className="auth-deco-leaf" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M100 20C60 20 20 60 20 120c0 30 10 50 30 60 10-40 30-70 60-90s60-30 70-40c-10-20-40-30-80-30z" fill="rgba(62,207,142,0.12)" stroke="rgba(62,207,142,0.35)" strokeWidth="1.5" />
-            <path d="M100 20c10 30 20 70 10 110" stroke="rgba(62,207,142,0.3)" strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M100 55c-15 12-28 28-38 50" stroke="rgba(62,207,142,0.2)" strokeWidth="1" strokeLinecap="round" />
-            <path d="M105 80c15-8 32-14 50-16" stroke="rgba(62,207,142,0.2)" strokeWidth="1" strokeLinecap="round" />
-          </svg>
-          <h2 className="auth-deco-title">DeepBlight</h2>
+          <div className="auth-deco-leaf-wrap">
+            <svg className="auth-deco-leaf" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M100 20C60 20 20 60 20 120c0 30 10 50 30 60 10-40 30-70 60-90s60-30 70-40c-10-20-40-30-80-30z" fill="rgba(62,207,142,0.12)" stroke="rgba(62,207,142,0.35)" strokeWidth="1.5" />
+              <path d="M100 20c10 30 20 70 10 110" stroke="rgba(62,207,142,0.3)" strokeWidth="1.2" strokeLinecap="round" />
+              <path d="M100 55c-15 12-28 28-38 50" stroke="rgba(62,207,142,0.2)" strokeWidth="1" strokeLinecap="round" />
+              <path d="M105 80c15-8 32-14 50-16" stroke="rgba(62,207,142,0.2)" strokeWidth="1" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h2 className="auth-deco-title">
+            <span className="auth-deco-title__neon">DeepBlight</span>
+          </h2>
           <p className="auth-deco-sub">AI-powered potato crop health monitoring. Detect leaf diseases, classify pests, and plan with real-time weather data.</p>
           <div className="auth-deco-features">
             <span>Leaf disease detection</span>

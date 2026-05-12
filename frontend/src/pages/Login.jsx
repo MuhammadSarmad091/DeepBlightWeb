@@ -46,7 +46,9 @@ export default function Login() {
   return (
     <Card className="auth-card" title="Welcome back">
       <div className="auth-logo" aria-hidden>
-        <Leaf size={36} strokeWidth={1.5} />
+        <span className="auth-logo__leaf">
+          <Leaf size={36} strokeWidth={1.5} />
+        </span>
       </div>
       <p className="auth-lead">Sign in to manage scans, catalogue, and weather insights.</p>
 
