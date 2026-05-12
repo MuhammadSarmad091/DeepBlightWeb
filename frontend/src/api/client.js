@@ -1,6 +1,6 @@
 //const BASE = import.meta.env.VITE_API_BASE ?? '/api'
-const BASE = import.meta.env.VITE_API_BASE ?? 'http://13.63.237.66:5000/';
-
+//const BASE = import.meta.env.VITE_API_BASE ?? 'http://13.63.237.66:5000/';
+const BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:5000/';
 /** Clears session and redirects to login when an authenticated request returns 401. */
 let unauthorizedHandler = null
 

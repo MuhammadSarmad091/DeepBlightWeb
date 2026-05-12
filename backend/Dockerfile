@@ -31,10 +31,13 @@ COPY app.py .
 COPY auth/ ./auth/
 COPY config/ ./config/
 COPY routes/ ./routes/
+# Admin module (also under routes/; explicit so new route files are not missed in reviews)
+COPY routes/admin.py ./routes/admin.py
 COPY ml_services/ ./ml_services/
 COPY models/ ./models/
 COPY services/ ./services/
 COPY utils/ ./utils/
+COPY utils/admin_seed.py ./utils/admin_seed.py
 
 # Create directories for uploads and storage
 RUN mkdir -p /app/uploads /app/storage

@@ -108,6 +108,7 @@ export function AuthProvider({ children }) {
       username: u.username,
       email: u.email,
       created_at: u.created_at,
+      role: u.role || 'user',
     }
     persist(token, normalized)
     return { ok: true }
@@ -119,6 +120,7 @@ export function AuthProvider({ children }) {
       user,
       ready: true,
       isAuthenticated: Boolean(token),
+      isAdmin: user?.role === 'admin',
       login,
       logout,
       register,

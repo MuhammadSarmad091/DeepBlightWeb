@@ -10,6 +10,7 @@ import Profile from './pages/Profile'
 import Plants from './pages/Plants'
 import Weather from './pages/Weather'
 import ForgotPassword from './pages/ForgotPassword'
+import Admin from './pages/Admin'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, ready } = useAuth()
@@ -42,6 +43,29 @@ function PublicOnly({ children }) {
   if (isAuthenticated) {
     return <Navigate to="/" replace />
   }
+  return children
+}
+
+function AdminRoute({ children }) {
+  const { isAuthenticated, ready, user } = useAuth()
+  const location = useLocation()
+
+  if (!ready) {
+    return (
+      <div className="center-pad page">
+        <Spinner label="Loading session" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (user?.role !== 'admin') {
+    return <Navigate to="/" replace />
+  }
+
   return children
 }
 
@@ -91,6 +115,14 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="plants" element={<Plants />} />
         <Route path="weather" element={<Weather />} />
+        <Route
+          path="admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

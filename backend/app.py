@@ -5,11 +5,11 @@ import uuid
 
 from datetime import datetime
 from flask import Flask, request, jsonify
-from werkzeug.security import generate_password_hash
 from pymongo import MongoClient, errors
 from bson import ObjectId
 from dotenv import load_dotenv
 from flask_mail import Mail
+from flask_cors import CORS
 
 # --- Import from new modular structure ---
 from config import Config, DevelopmentConfig, ProductionConfig
@@ -20,6 +20,8 @@ from routes.leafscan import setup_leafscan_routes
 from routes.plants import setup_plants_routes
 from routes.insectscan import setup_insectscan_routes
 from routes.weather import setup_weather_routes
+from routes.admin import setup_admin_routes
+from utils.admin_seed import ensure_admin_user
 
 # --- Load Environment Variables ---
 load_dotenv()
@@ -31,6 +33,14 @@ if FLASK_ENV == "production":
     app.config.from_object(ProductionConfig)
 else:
     app.config.from_object(DevelopmentConfig)
+
+# Cross-origin API access (any host). Do not use supports_credentials=True with origins="*".
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+)
 
 # --- Initialize Flask-Mail ---
 mail = Mail(app)
@@ -89,6 +99,8 @@ try:
 except errors.OperationFailure as e:
     print(f"Index creation failed (this might be okay if they already exist): {e}")
 
+ensure_admin_user(users_col)
+
 # --- Setup Authentication Routes ---
 setup_auth_routes(app, users_col, unverified_users_col, mail, password_resets_col=password_resets_col)
 # --- Setup Leafscan Routes ---
@@ -99,6 +111,8 @@ setup_insectscan_routes(app, users_col, insectscan_col, token_required, detector
 setup_weather_routes(app, users_col, token_required)
 # --- Setup Plants Routes ---
 setup_plants_routes(app, users_col, token_required)
+# --- Admin analytics (role=admin only) ---
+setup_admin_routes(app, users_col, leafscan_col, insectscan_col, token_required)
 
 
 # --- API Endpoints ---

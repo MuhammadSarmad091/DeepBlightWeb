@@ -52,3 +52,18 @@ def token_required(users_col, app):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+
+def admin_required(f):
+    """
+    Use only after @token_required — expects request.user with role == 'admin'.
+    """
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = getattr(request, "user", None) or {}
+        if user.get("role") != "admin":
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+
+    return decorated

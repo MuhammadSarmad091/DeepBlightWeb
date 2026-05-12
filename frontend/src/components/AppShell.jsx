@@ -9,11 +9,12 @@ import {
   Menu,
   X,
   User,
+  BarChart3,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
-const nav = [
+const baseNav = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/detect', label: 'Detection', icon: ScanSearch },
   { to: '/plants', label: 'Plant catalogue', icon: BookOpen },
@@ -28,6 +29,7 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const nav = user?.role === 'admin' ? [...baseNav, { to: '/admin', label: 'Admin', icon: BarChart3 }] : baseNav
 
   useEffect(() => {
     if (!open) return undefined

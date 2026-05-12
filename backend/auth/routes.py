@@ -114,6 +114,7 @@ def setup_auth_routes(app, users_col, unverified_users_col, mail, password_reset
             "username": temp_user["username"],
             "email": temp_user["email"],
             "password": temp_user["password"],
+            "role": "user",
             "created_at": datetime.utcnow(),
         }
 
@@ -148,7 +149,12 @@ def setup_auth_routes(app, users_col, unverified_users_col, mail, password_reset
 
         user_id = str(user["_id"])
         token = generate_token(user_id, app=app)
-        user_data = {"user_id": user_id, "username": user.get("username"), "email": user.get("email")}
+        user_data = {
+            "user_id": user_id,
+            "username": user.get("username"),
+            "email": user.get("email"),
+            "role": user.get("role") or "user",
+        }
         return jsonify({"message": "login successful", "token": token, "user": user_data})
 
 

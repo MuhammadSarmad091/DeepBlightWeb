@@ -762,6 +762,9 @@ a.stat-card-link:hover {
 .top-nav__nav--open .top-nav__link:nth-child(4) {
   animation-delay: 0.16s;
 }
+.top-nav__nav--open .top-nav__link:nth-child(5) {
+  animation-delay: 0.2s;
+}
 
 @keyframes top-nav-link-reveal {
   from {
@@ -2735,4 +2738,354 @@ a.btn {
   .prob-bar {
     transition: none;
   }
+
+  .admin-stat-card--anim,
+  .admin-chart-card--anim {
+    animation: none !important;
+  }
+
+  .admin-stat-card--anim:hover,
+  .admin-chart-card--anim:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .admin-chart-tooltip {
+    animation: none !important;
+  }
+}
+
+/* —— Admin analytics —— */
+.admin-page .page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes admin-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes admin-chart-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-stat-card--anim {
+  animation: admin-tile-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+
+.admin-stat-card--anim:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(62, 207, 142, 0.1);
+}
+
+.admin-stat-grid .admin-stat-card--anim:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.admin-stat-grid .admin-stat-card--anim:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.admin-stat-grid .admin-stat-card--anim:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.admin-stat-grid .admin-stat-card--anim:nth-child(4) {
+  animation-delay: 0.22s;
+}
+
+.admin-chart-card--anim {
+  animation: admin-chart-card-in 0.58s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition:
+    box-shadow 0.35s ease,
+    border-color 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.admin-chart-card--anim:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(62, 207, 142, 0.12);
+  transform: translateY(-2px);
+}
+
+.admin-chart-card--anim-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.admin-chart-card--anim-delay-2 {
+  animation-delay: 0.14s;
+}
+
+.admin-stat-card .card-body {
+  position: relative;
+  padding-top: 1.35rem;
+}
+
+.admin-stat-icon {
+  position: absolute;
+  top: 0.85rem;
+  right: 1rem;
+  opacity: 0.85;
+}
+
+.admin-stat-icon--users {
+  color: #7eb8da;
+}
+.admin-stat-icon--leaf {
+  color: #3ecf8e;
+}
+.admin-stat-icon--bug {
+  color: #e8a849;
+}
+.admin-stat-icon--total {
+  color: #c9a227;
+}
+
+.admin-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #f0faf3;
+}
+
+.admin-stat-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.admin-stat-sub {
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
+.admin-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-charts-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .admin-charts-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-chart-card .card-body {
+  padding-top: 0.5rem;
+}
+
+.admin-chart-hint {
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.admin-chart-wrap {
+  width: 100%;
+  min-height: 320px;
+  position: relative;
+}
+
+.admin-chart-wrap--short {
+  min-height: 280px;
+}
+
+/* Recharts: axis + legend read as UI text */
+.admin-recharts .recharts-cartesian-axis-tick-value {
+  fill: var(--text-muted);
+}
+
+.admin-recharts .recharts-legend-item {
+  margin-right: 1.1rem !important;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.admin-recharts .recharts-legend-item-text {
+  color: var(--text-muted) !important;
+  font-size: 0.8rem !important;
+  font-weight: 500;
+}
+
+.admin-recharts .recharts-legend-item:hover {
+  transform: translateY(-1px);
+}
+
+.admin-recharts .recharts-legend-item:hover .recharts-legend-item-text {
+  color: var(--text) !important;
+}
+
+.admin-recharts .recharts-legend-item.inactive {
+  opacity: 0.35;
+}
+
+.admin-recharts .recharts-legend-item.inactive .recharts-legend-item-text {
+  color: var(--text-muted) !important;
+}
+
+.admin-recharts .recharts-tooltip-cursor {
+  transition: opacity 0.15s ease;
+}
+
+/* Custom tooltip (AdminChartTooltip) */
+.admin-chart-tooltip {
+  min-width: 9.5rem;
+  max-width: 16rem;
+  padding: 0.65rem 0.75rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(165deg, rgba(21, 40, 32, 0.98), rgba(15, 31, 23, 0.98));
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow), 0 0 24px rgba(62, 207, 142, 0.08);
+  backdrop-filter: blur(10px);
+  animation: admin-tooltip-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes admin-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.admin-chart-tooltip__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-chart-tooltip__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-chart-tooltip__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.45rem 0.5rem;
+  padding: 0.28rem 0;
+  border-radius: 6px;
+  transition: background 0.18s ease;
+}
+
+.admin-chart-tooltip__row:hover {
+  background: rgba(62, 207, 142, 0.06);
+}
+
+.admin-chart-tooltip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(10, 18, 16, 0.9);
+  flex-shrink: 0;
+}
+
+.admin-chart-tooltip__name {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  transition: color 0.18s ease;
+}
+
+.admin-chart-tooltip__row:hover .admin-chart-tooltip__name {
+  color: var(--text);
+}
+
+.admin-chart-tooltip__value {
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-badge {
+  color: #3ecf8e;
+  font-weight: 600;
+}
+
+.admin-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  margin-top: 1.5rem;
+  max-width: 52rem;
+}
+
+.inline-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
 }
