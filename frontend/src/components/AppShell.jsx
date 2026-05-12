@@ -5,12 +5,13 @@ import {
   Leaf,
   BookOpen,
   CloudSun,
-  User,
+  CircleUser,
   LogOut,
   Menu,
   X,
+  User,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
 const nav = [
@@ -18,68 +19,119 @@ const nav = [
   { to: '/detect', label: 'Detection', icon: ScanSearch },
   { to: '/plants', label: 'Plant catalogue', icon: BookOpen },
   { to: '/weather', label: 'Weather', icon: CloudSun },
-  { to: '/profile', label: 'Profile', icon: User },
+  { to: '/profile', label: 'Profile', icon: CircleUser },
 ]
+
+function linkClass(isActive) {
+  return `top-nav__link ${isActive ? 'top-nav__link--active' : ''}`
+}
 
 export function AppShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
 
+  useEffect(() => {
+    if (!open) return undefined
+    function onKey(ev) {
+      if (ev.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
+
   function handleLogout() {
+    setOpen(false)
     logout()
     navigate('/login', { replace: true })
   }
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-brand">
-          <span className="brand-icon" aria-hidden>
-            <Leaf size={22} strokeWidth={2} />
-          </span>
-          <div>
-            <div className="brand-name">DeepBlight</div>
-            <div className="brand-tag">Crop health intelligence</div>
+      <header className="top-nav">
+        <div className="top-nav__inner">
+          <NavLink to="/" end className="top-nav__brand" onClick={() => setOpen(false)}>
+            <span className="top-nav__brand-icon" aria-hidden>
+              <Leaf size={22} strokeWidth={2} />
+            </span>
+            <span className="top-nav__brand-text">
+              <span className="top-nav__brand-name">DeepBlight</span>
+              <span className="top-nav__brand-tag">Crop health intelligence</span>
+            </span>
+          </NavLink>
+
+          <nav
+            className={`top-nav__nav ${open ? 'top-nav__nav--open' : ''}`}
+            id="primary-navigation"
+            aria-label="Main"
+          >
+            <div className="top-nav__link-row">
+              {nav.map((item) => {
+                const NavIcon = item.icon
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) => linkClass(isActive)}
+                    onClick={() => setOpen(false)}
+                  >
+                    <NavIcon size={18} strokeWidth={1.75} className="top-nav__link-icon" aria-hidden />
+                    <span>{item.label}</span>
+                  </NavLink>
+                )
+              })}
+            </div>
+
+            <div className="top-nav__nav-mobile-footer">
+              <div className="top-nav__mobile-user">
+                <User size={18} strokeWidth={2} className="top-nav__user-icon" aria-hidden />
+                <span className="top-nav__mobile-user-name">{user?.username || 'User'}</span>
+              </div>
+              <button type="button" className="top-nav__logout top-nav__logout--mobile" onClick={handleLogout}>
+                <LogOut size={16} strokeWidth={2} aria-hidden />
+                Sign out
+              </button>
+            </div>
+          </nav>
+
+          <div className="top-nav__end">
+            <div className="top-nav__user-desk">
+              <User size={18} strokeWidth={2} className="top-nav__user-icon" aria-hidden />
+              <span className="top-nav__user-desk-name">{user?.username || 'User'}</span>
+            </div>
+            <button type="button" className="top-nav__logout top-nav__logout--desk" onClick={handleLogout}>
+              <LogOut size={16} strokeWidth={2} aria-hidden />
+              <span>Sign out</span>
+            </button>
+            <button
+              type="button"
+              className={`top-nav__menu-btn ${open ? 'top-nav__menu-btn--open' : ''}`}
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls="primary-navigation"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+            >
+              {open ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
-          <button type="button" className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close menu">
-            <X size={20} />
-          </button>
         </div>
 
-        <nav className="sidebar-nav" aria-label="Main">
-          {nav.map((item) => {
-            const NavIcon = item.icon
-            return (
-              <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'nav-item-active' : ''}`} onClick={() => setOpen(false)}>
-                <NavIcon size={20} strokeWidth={1.75} />
-                {item.label}
-              </NavLink>
-            )
-          })}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-user-name">{user?.username || 'User'}</div>
-            <div className="sidebar-user-email">{user?.email}</div>
-          </div>
-          <button type="button" className="nav-item nav-logout" onClick={handleLogout}>
-            <LogOut size={20} strokeWidth={1.75} />
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      {open && <button type="button" className="sidebar-scrim" aria-label="Close menu" onClick={() => setOpen(false)} />}
+        {open && (
+          <button type="button" className="top-nav__scrim" aria-label="Close menu" onClick={() => setOpen(false)} />
+        )}
+      </header>
 
       <div className="main-area">
-        <header className="top-bar">
-          <button type="button" className="menu-toggle" onClick={() => setOpen(true)} aria-label="Open menu">
-            <Menu size={22} />
-          </button>
-          <div className="top-bar-spacer" />
-        </header>
         <main className="page-main">
           <Outlet />
         </main>
