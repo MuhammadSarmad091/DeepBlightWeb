@@ -16,21 +16,69 @@ export default function Weather() {
   const [weekly, setWeekly] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const [suggestLoading, setSuggestLoading] = useState(false)
-  const geoAttempted = useRef(false)
-
-  const fetchWeatherRef = useRef(null)
+  const autoFetchStarted = useRef(false)
 
   useEffect(() => {
     localStorage.setItem(LS_LOC, location)
   }, [location])
 
-  useEffect(() => {
-    if (geoAttempted.current) return
-    geoAttempted.current = true
+  const fetchWeather = useCallback(
+    async (loc) => {
+      const q = loc.trim()
+      if (!q) {
+        setError('Enter a city, postal code, or coordinates (lat,lon).')
+        return
+      }
+      setLoading(true)
+      setError('')
+      setCurrent(null)
+      setWeekly(null)
 
-    const stored = localStorage.getItem(LS_LOC)
-    if (stored) {
-      if (fetchWeatherRef.current) fetchWeatherRef.current(stored)
+      const [curRes, weekRes] = await Promise.all([
+        apiFetch('/weather/current', { token, query: { location: q, aqi: 'yes' } }),
+        apiFetch('/weather/weekly', { token, query: { location: q } }),
+      ])
+
+      setLoading(false)
+
+      const errs = []
+      if (!curRes.ok) {
+        if (curRes.status === 404) errs.push(`Current: ${curRes.data?.error || 'Location not found.'}`)
+        else if (curRes.status === 500) errs.push(`Current: ${curRes.data?.error || 'Weather service unavailable.'}`)
+        else errs.push(`Current: ${curRes.errorMessage || 'Could not load.'}`)
+      } else {
+        setCurrent(curRes.data)
+      }
+
+      if (!weekRes.ok) {
+        if (weekRes.status === 404) errs.push(`Forecast: ${weekRes.data?.error || 'Location not found.'}`)
+        else if (weekRes.status === 500) errs.push(`Forecast: ${weekRes.data?.error || 'Forecast unavailable.'}`)
+        else errs.push(`Forecast: ${weekRes.errorMessage || 'Could not load.'}`)
+      } else {
+        setWeekly(weekRes.data)
+      }
+
+      if (errs.length === 2) {
+        setError(errs.join(' '))
+        setCurrent(null)
+        setWeekly(null)
+      } else if (errs.length === 1) {
+        setError(errs[0])
+      }
+      setLocation(q)
+      setDraft(q)
+    },
+    [token]
+  )
+
+  /** First visit with auth: saved location, else browser geolocation → forecast. */
+  useEffect(() => {
+    if (!token || autoFetchStarted.current) return
+    autoFetchStarted.current = true
+
+    const saved = localStorage.getItem(LS_LOC)?.trim()
+    if (saved) {
+      void fetchWeather(saved)
       return
     }
 
@@ -40,11 +88,14 @@ export default function Weather() {
       (pos) => {
         const label = `${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`
         setDraft(label)
-        if (fetchWeatherRef.current) fetchWeatherRef.current(label)
+        void fetchWeather(label)
       },
-      () => {}
+      () => {
+        /* user denied or unavailable — manual search */
+      },
+      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 15_000 }
     )
-  }, [])
+  }, [token, fetchWeather])
 
   async function loadSuggestions(q) {
     const t = q.trim()
@@ -62,65 +113,17 @@ export default function Weather() {
     setSuggestions(Array.isArray(data.results) ? data.results : [])
   }
 
-  fetchWeatherRef.current = fetchWeather
-
-  async function fetchWeather(loc) {
-    const q = loc.trim()
-    if (!q) {
-      setError('Enter a city, postal code, or coordinates (lat,lon).')
-      return
-    }
-    setLoading(true)
-    setError('')
-    setCurrent(null)
-    setWeekly(null)
-
-    const [curRes, weekRes] = await Promise.all([
-      apiFetch('/weather/current', { token, query: { location: q, aqi: 'yes' } }),
-      apiFetch('/weather/weekly', { token, query: { location: q } }),
-    ])
-
-    setLoading(false)
-
-    const errs = []
-    if (!curRes.ok) {
-      if (curRes.status === 404) errs.push(`Current: ${curRes.data?.error || 'Location not found.'}`)
-      else if (curRes.status === 500) errs.push(`Current: ${curRes.data?.error || 'Weather service unavailable.'}`)
-      else errs.push(`Current: ${curRes.errorMessage || 'Could not load.'}`)
-    } else {
-      setCurrent(curRes.data)
-    }
-
-    if (!weekRes.ok) {
-      if (weekRes.status === 404) errs.push(`Forecast: ${weekRes.data?.error || 'Location not found.'}`)
-      else if (weekRes.status === 500) errs.push(`Forecast: ${weekRes.data?.error || 'Forecast unavailable.'}`)
-      else errs.push(`Forecast: ${weekRes.errorMessage || 'Could not load.'}`)
-    } else {
-      setWeekly(weekRes.data)
-    }
-
-    if (errs.length === 2) {
-      setError(errs.join(' '))
-      setCurrent(null)
-      setWeekly(null)
-    } else if (errs.length === 1) {
-      setError(errs[0])
-    }
-    setLocation(q)
-    setDraft(q)
-  }
-
   function handleSubmit(ev) {
     ev.preventDefault()
     setSuggestions([])
-    fetchWeather(draft)
+    void fetchWeather(draft)
   }
 
   function pickSuggestion(s) {
     const label = s.name && s.country ? `${s.name}, ${s.country}` : s.url || s.name || ''
     setDraft(label)
     setSuggestions([])
-    fetchWeather(label)
+    void fetchWeather(label)
   }
 
   const locName = current?.location?.name || weekly?.location?.name
