@@ -5,7 +5,6 @@ import {
   Leaf,
   BookOpen,
   CloudSun,
-  CircleUser,
   LogOut,
   Menu,
   X,
@@ -19,7 +18,6 @@ const nav = [
   { to: '/detect', label: 'Detection', icon: ScanSearch },
   { to: '/plants', label: 'Plant catalogue', icon: BookOpen },
   { to: '/weather', label: 'Weather', icon: CloudSun },
-  { to: '/profile', label: 'Profile', icon: CircleUser },
 ]
 
 function linkClass(isActive) {
@@ -93,10 +91,16 @@ export function AppShell() {
             </div>
 
             <div className="top-nav__nav-mobile-footer">
-              <div className="top-nav__mobile-user">
-                <User size={18} strokeWidth={2} className="top-nav__user-icon" aria-hidden />
-                <span className="top-nav__mobile-user-name">{user?.username || 'User'}</span>
-              </div>
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  `top-nav__link top-nav__link--profile-chip top-nav__link--profile-mobile ${isActive ? 'top-nav__link--active' : ''}`.trim()
+                }
+                onClick={() => setOpen(false)}
+              >
+                <User size={18} strokeWidth={2} className="top-nav__link-icon" aria-hidden />
+                <span className="top-nav__user-desk-name">{user?.username || 'User'}</span>
+              </NavLink>
               <button type="button" className="top-nav__logout top-nav__logout--mobile" onClick={handleLogout}>
                 <LogOut size={16} strokeWidth={2} aria-hidden />
                 Sign out
@@ -105,10 +109,16 @@ export function AppShell() {
           </nav>
 
           <div className="top-nav__end">
-            <div className="top-nav__user-desk">
-              <User size={18} strokeWidth={2} className="top-nav__user-icon" aria-hidden />
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                `top-nav__link top-nav__link--profile-chip top-nav__link--profile-desk ${isActive ? 'top-nav__link--active' : ''}`.trim()
+              }
+              onClick={() => setOpen(false)}
+            >
+              <User size={18} strokeWidth={2} className="top-nav__link-icon" aria-hidden />
               <span className="top-nav__user-desk-name">{user?.username || 'User'}</span>
-            </div>
+            </NavLink>
             <button type="button" className="top-nav__logout top-nav__logout--desk" onClick={handleLogout}>
               <LogOut size={16} strokeWidth={2} aria-hidden />
               <span>Sign out</span>
